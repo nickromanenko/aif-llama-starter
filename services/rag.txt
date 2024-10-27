@@ -1,0 +1,44 @@
+┌─────────────┐            ┌───────────────┐            ┌───────────────────┐
+│             │            │               │            │                   │
+│  User Query │            │  Embedding    │            │ Vector Database   │
+│             │───Step 1──▶│  Generation   │───Step 2──▶│   Retrieval       │
+│ ("What are  │            │ (OpenAI API)  │            │  (Pinecone)       │
+│ the benefits│            │               │            │                   │
+│  of ... ?") │            └───────────────┘            └───────────────────┘
+│             │                                          │
+└─────────────┘                                          │
+                                                         │
+                                                         ▼
+                                        ┌─────────────────────────┐
+                                        │                         │
+                                        │ Retrieved Documents     │
+                                        │ (Most relevant to query)│
+                                        │                         │
+                                        └──────────────┬──────────┘
+                                                       │
+                                            Step 3     │
+                                                       ▼
+                                        ┌─────────────────────────┐
+                                        │                         │
+                                        │ Contextual Prompt       │
+                                        │ Construction            │
+                                        │                         │
+                                        └──────────────┬──────────┘
+                                                       │
+                                            Step 4     │
+                                                       ▼
+                                        ┌─────────────────────────┐
+                                        │                         │
+                                        │  Language Model         │
+                                        │  Response Generation    │
+                                        │  (OpenAI's GPT Model)   │
+                                        │                         │
+                                        └──────────────┬──────────┘
+                                                       │
+                                            Step 5     │
+                                                       ▼
+                                        ┌─────────────────────────┐
+                                        │                         │
+                                        │    Answer to User       │
+                                        │                         │
+                                        └─────────────────────────┘
