@@ -19,14 +19,19 @@ export async function sendMessage(threadId: string, content: { text: string; url
         thread_id: threadId,
         role: 'user',
         content: content.text,
-        url: content.url || null,
     });
 
     // 3. Prepare messages for OpenAI
-    const messages: any[] = dbMessages.map(message => ({
-        role: message.role,
-        content: message.content,
-    }));
+    const messages: any[] = dbMessages.map(message => {
+        const item: any = {
+            role: message.role,
+            content: message.content || '',
+        };
+        if (message.tool_calls) {
+            item.tool_calls = message.tool_calls;
+        }
+        return item;
+    });
     messages.push({
         role: 'user',
         content: content.text,
@@ -36,26 +41,19 @@ export async function sendMessage(threadId: string, content: { text: string; url
     const msg = await createLlamaMessage(messages);
     if (msg.tool_calls) {
         messages.push(msg);
+        await createMessage({
+            thread_id: threadId,
+            role: 'assistant',
+            tool_calls: msg.tool_calls,
+        });
+
         console.log('tool_calls', msg.tool_calls);
         const toolCall = msg.tool_calls[0];
-        const embeddingResult = await embed(toolCall.function.arguments.question);
-        const vector = embeddingResult[0].embedding;
-        const matches = (await searchIndex(vector)).matches;
-        if (matches.length) {
-            // console.log(matches);
-            console.log('Found matches:', matches.length);
-            const context = matches.map(match => match.metadata.content).join('\n\n');
-            // console.log('Context:', context);
-            messages.push({
-                role: 'tool',
-                content: context,
-            });
-        } else {
-            messages.push({
-                role: 'tool',
-                content: '',
-            });
-        }
+        const context = await getContext(toolCall.function.arguments.question);
+        messages.push({
+            role: 'tool',
+            content: context,
+        });
         const newMsg = await createLlamaMessage(messages);
         console.log(newMsg);
         response.content = newMsg.content;
@@ -71,6 +69,12 @@ export async function sendMessage(threadId: string, content: { text: string; url
     });
 
     return response;
+}
+
+async function getContext(query: string) {
+    const embeddingResult = await embed(query);
+    const matches = (await searchIndex(embeddingResult[0].embedding)).matches;
+    return matches.length ? matches.map(match => match.metadata.content).join('\n\n') : '';
 }
 
 async function createLlamaMessage(messages: any[]) {
